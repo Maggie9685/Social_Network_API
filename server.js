@@ -60,7 +60,17 @@ app.put('/api/users/:id', (req, res) => {
 
 app.delete('/api/users/:id', (req, res) => {
   db.User.findOneAndDelete({ _id: req.params.id })
-  .then(dbUserData => res.json(dbUserData))
+  .then(({username}) => {
+    return db.Thought.findOneAndDelete({username: username});
+  })
+  .then(() => {
+    return db.User.findOneAndUpdate(
+      { friends: req.params.id },
+      { $pull: { friends: req.params.id }},
+      { runValidators: true, new: true }
+    );
+  })
+  .then(dbUserData => res.json("User is deleted"))
   .catch(err => res.json(err));
 });
 
@@ -94,7 +104,7 @@ app.delete('/api/users/:userId/friends/:friendId', (req, res) => {
     if(!dbUserData){
       return res.status(404).json({message: "No user for this id!"});
     }
-    res.json(dbUserData);
+    res.json("Friend is deleted.");
   })
   .catch(err => {
     console.log(err);
@@ -142,29 +152,6 @@ app.post('/api/thoughts', (req, res) => {
   .catch(err => {
     console.log(err);
   })
-  /*
-  db.Thought.create(req.body)
-  .then(dbThoughtData => {
-    res.json(dbThoughtData);
-    db.User.findOneAndUpdate(
-      { _id: req.body.userId },
-      { $addToSet: { thoughts: dbThoughtData._id }},
-      { runValidators: true, new: true }
-    )
-    .then (dbUserData => {
-      if(!dbUserData){
-        return res.status(404).json({message: "No user for this id!"});
-      }
-      res.json(dbUserData);
-    })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json(err);
-    })
-  })
-  .catch(err => res.json(err));
-  */
-
 });
 
 app.put('/api/thoughts/:id', (req, res) => {
@@ -181,7 +168,14 @@ app.put('/api/thoughts/:id', (req, res) => {
 
 app.delete('/api/thoughts/:id', (req, res) => {
   db.Thought.findOneAndDelete({ _id: req.params.id })
-  .then(dbThoughtData => res.json(dbThoughtData))
+  .then(({_id}) => {
+    return db.User.findOneAndUpdate(
+      { _id: req.body.userId },
+      { $pull: { thoughts: _id }},
+      { runValidators: true, new: true }
+    );
+  })
+  .then(dbThoughtData => res.json("Thought is deleted"))
   .catch(err => res.json(err));
 });
 
@@ -215,7 +209,7 @@ app.delete('/api/thoughts/:thoughtId/reactions/:reactionId', (req, res) => {
     if(!dbThoughtData){
       return res.status(404).json({message: "No thought for this id!"});
     }
-    res.json(dbThoughtData);
+    res.json("Reaction is deleted");
   })
   .catch(err => {
     console.log(err);
