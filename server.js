@@ -69,7 +69,7 @@ app.delete('/api/users/:id', (req, res) => {
 app.post('/api/users/:userId/friends/:friendId', (req, res) => {
   db.User.findOneAndUpdate(
     { _id: req.params.userId },
-    { $addToSet: { friends: req.params.userId }},
+    { $addToSet: { friends: req.params.friendId }},
     { runValidators: true, new: true }
   )
   .then (dbUserData => {
@@ -126,8 +126,45 @@ app.get('/api/thoughts/:id', (req, res) => {
 
 app.post('/api/thoughts', (req, res) => {
   db.Thought.create(req.body)
-  .then(dbThoughtData => res.json(dbThoughtData))
+  .then(({_id}) => {
+    return db.User.findOneAndUpdate(
+      { _id: req.body.userId },
+      { $push: { thoughts: _id }},
+      { runValidators: true, new: true }
+    );
+  })
+  .then (dbUserData => {
+    if(!dbUserData){
+      return res.status(404).json({message: "No user for this id!"});
+    }
+    res.json(dbUserData);
+  })
+  .catch(err => {
+    console.log(err);
+  })
+  /*
+  db.Thought.create(req.body)
+  .then(dbThoughtData => {
+    res.json(dbThoughtData);
+    db.User.findOneAndUpdate(
+      { _id: req.body.userId },
+      { $addToSet: { thoughts: dbThoughtData._id }},
+      { runValidators: true, new: true }
+    )
+    .then (dbUserData => {
+      if(!dbUserData){
+        return res.status(404).json({message: "No user for this id!"});
+      }
+      res.json(dbUserData);
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(500).json(err);
+    })
+  })
   .catch(err => res.json(err));
+  */
+
 });
 
 app.put('/api/thoughts/:id', (req, res) => {
